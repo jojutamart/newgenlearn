@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌈 Hangman มหาสนุก</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #4FC3F7;
+    --coral: #FF7043;
+    --yellow: #FFD54F;
+    --mint: #81C784;
+    --purple: #CE93D8;
+    --navy: #1A237E;
+    --bg: #E3F2FD;
+    --card: #FFFFFF;
+    --radius: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Kanit', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Floating bubbles background */
+  .bubbles {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    overflow: hidden;
+  }
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.15;
+    animation: floatUp linear infinite;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0.8); opacity: 0.1; }
+    100% { transform: translateY(-120px) scale(1.2); opacity: 0; }
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; position: relative; z-index: 1; }
+  .screen.active { display: block; }
+
+  /* ===== HEADER ===== */
+  header {
+    text-align: center;
+    padding: 28px 20px 0;
+  }
+  header h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.4rem;
+    color: var(--navy);
+    text-shadow: 3px 3px 0 var(--yellow);
+    letter-spacing: 1px;
+  }
+  header p.subtitle {
+    color: #5C6BC0;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* ===== SETUP SCREEN ===== */
+  #screen-setup {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  .setup-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: 0 8px 32px rgba(26,35,126,0.10);
+    margin-top: 20px;
+  }
+
+  .setup-card h2 {
+    font-size: 1.3rem;
+    color: var(--navy);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Word list area */
+  #word-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .word-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .word-row input[type="text"] {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2.5px solid #B3C6FF;
+    border-radius: 14px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1rem;
+    color: var(--navy);
+    background: #F3F4FF;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .word-row input:focus { border-color: var(--sky); background: #fff; }
+
+  .word-row input[type="text"]::placeholder { color: #9E9EC8; }
+
+  .hint-input {
+    flex: 1.4 !important;
+  }
+
+  .btn-remove {
+    width: 34px; height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #FFCDD2;
+    color: #C62828;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .btn-remove:hover { background: #EF9A9A; }
+
+  .col-labels {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding-left: 0;
+  }
+  .col-labels span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #7986CB;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .col-labels .lbl-word { flex: 1; }
+  .col-labels .lbl-hint { flex: 1.4; }
+  .col-labels .lbl-del { width: 34px; }
+
+  .btn-add-word {
+    width: 100%;
+    padding: 10px;
+    border: 2.5px dashed #B3C6FF;
+    border-radius: 14px;
+    background: transparent;
+    color: #5C6BC0;
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    margin-top: 4px;
+  }
+  .btn-add-word:hover { background: #EEF2FF; border-color: var(--sky); color: var(--navy); }
+
+  .btn-start {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--coral) 0%, #FF8A65 100%);
+    color: #fff;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255,112,67,0.35);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-start:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(255,112,67,0.45); }
+  .btn-start:active { transform: translateY(0); }
+
+  .presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .preset-btn {
+    padding: 6px 14px;
+    border: 2px solid var(--sky);
+    border-radius: 20px;
+    background: #E1F5FE;
+    color: #0277BD;
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .preset-btn:hover { background: var(--sky); color: #fff; }
+
+  /* ===== GAME SCREEN ===== */
+  #screen-game {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 16px 16px 40px;
+  }
+
+  .game-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .progress-pill {
+    background: #fff;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-weight: 700;
+    color: var(--navy);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    font-size: 0.9rem;
+  }
+
+  .lives-display {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .heart {
+    font-size: 1.4rem;
+    transition: transform .2s;
+    display: inline-block;
+  }
+  .heart.lost { opacity: 0.25; transform: scale(0.8); filter: grayscale(1); }
+
+  /* Bear character */
+  .bear-wrap {
+    text-align: center;
+    margin: 8px 0;
+  }
+
+  .bear-svg-container {
+    display: inline-block;
+    position: relative;
+    width: 160px;
+    height: 160px;
+  }
+
+  /* Hint box */
+  .hint-box {
+    background: linear-gradient(135deg, #FFF9C4, #FFF3E0);
+    border: 2.5px solid var(--yellow);
+    border-radius: 18px;
+    padding: 12px 20px;
+    text-align: center;
+    margin: 8px 0;
+    font-size: 1rem;
+    color: #5D4037;
+    font-weight: 600;
+  }
+  .hint-box span.hint-label {
+    color: #FF8F00;
+    font-weight: 700;
+  }
+
+  /* Word display */
+  .word-display {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+
+  .letter-box {
+    width: 44px;
+    height: 52px;
+    border-bottom: 4px solid #5C6BC0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.6rem;
+    color: var(--navy);
+    transition: all .3s;
+    border-radius: 4px 4px 0 0;
+  }
+  .letter-box.revealed {
+    animation: popIn .3s ease;
+  }
+  .letter-box.wrong-reveal {
+    color: var(--coral);
+    border-bottom-color: var(--coral);
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0.5); }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  /* Keyboard */
+  .keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0;
+  }
+  .key-row {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .key {
+    width: 40px;
+    height: 42px;
+    border: 2.5px solid #B3C6FF;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--navy);
+    font-family: 'Kanit', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+  }
+  .key:hover:not(:disabled) { background: var(--sky); color: #fff; border-color: var(--sky); transform: translateY(-2px); }
+  .key:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .key.correct { background: var(--mint); border-color: #388E3C; color: #fff; }
+  .key.wrong { background: #FFCDD2; border-color: #E53935; color: #fff; }
+
+  /* Listen button */
+  .btn-listen {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto 8px;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--purple), #AB47BC);
+    color: #fff;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(171,71,188,0.3);
+    transition: transform .15s;
+  }
+  .btn-listen:hover { transform: scale(1.05); }
+  .btn-listen:active { transform: scale(0.97); }
+  .btn-listen .speaker-icon { font-size: 1.2rem; }
+
+  /* Wrong guesses */
+  .wrong-letters {
+    text-align: center;
+    font-size: 1rem;
+    color: var(--coral);
+    font-weight: 700;
+    min-height: 28px;
+    margin: 4px 0;
+    letter-spacing: 2px;
+  }
+
+  /* ===== RESULT OVERLAY ===== */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,35,126,0.45);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .overlay.show { display: flex; }
+
+  .result-card {
+    background: #fff;
+    border-radius: 28px;
+    padding: 32px 28px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: slideUp .4s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .result-emoji { font-size: 4rem; margin-bottom: 8px; }
+  .result-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+  .result-word {
+    font-size: 1.1rem;
+    color: #5C6BC0;
+    margin-bottom: 6px;
+  }
+  .result-word strong { color: var(--navy); font-size: 1.4rem; }
+
+  .result-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .btn-next, .btn-quit-review {
+    padding: 14px;
+    border: none;
+    border-radius: 18px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .15s;
+  }
+  .btn-next {
+    background: linear-gradient(135deg, var(--mint), #43A047);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(67,160,71,0.3);
+  }
+  .btn-quit-review {
+    background: linear-gradient(135deg, var(--yellow), #FFB300);
+    color: var(--navy);
+    box-shadow: 0 4px 16px rgba(255,179,0,0.3);
+  }
+  .btn-next:hover, .btn-quit-review:hover { transform: scale(1.03); }
+
+  /* ===== REVIEW SCREEN ===== */
+  #screen-review {
+    max-width: 580px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+
+  .review-header {
+    text-align: center;
+    margin: 20px 0;
+  }
+  .review-header h2 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    color: var(--navy);
+  }
+  .review-header p { color: #5C6BC0; font-size: 1rem; }
+
+  .review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .review-item {
+    background: #fff;
+    border-radius: 20px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 16px rgba(26,35,126,0.08);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .review-item .rv-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--coral), #FF8A65);
+    color: #fff;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .review-item .rv-content { flex: 1; }
+  .review-item .rv-word {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    color: var(--navy);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .review-item .rv-hint {
+    font-size: 0.85rem;
+    color: #7986CB;
+    margin-top: 2px;
+  }
+  .review-item .rv-result {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .rv-result.rv-fail { background: #FFCDD2; color: #C62828; }
+
+  .btn-listen-rv {
+    background: none;
+    border: 2px solid var(--purple);
+    color: var(--purple);
+    border-radius: 12px;
+    padding: 6px 12px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all .15s;
+    flex-shrink: 0;
+  }
+  .btn-listen-rv:hover { background: var(--purple); color: #fff; }
+
+  /* Practice mode in review */
+  .practice-area {
+    background: linear-gradient(135deg, #E8F5E9, #F3E5F5);
+    border-radius: 18px;
+    padding: 16px 18px;
+    margin-top: 12px;
+  }
+  .practice-area p { font-size: 0.85rem; color: #4A148C; font-weight: 600; margin-bottom: 8px; }
+
+  .practice-input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .practice-input-row input {
+    flex: 1;
+    padding: 8px 14px;
+    border: 2px solid #CE93D8;
+    border-radius: 12px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    background: #fff;
+    text-transform: uppercase;
+  }
+  .practice-input-row input:focus { border-color: var(--purple); }
+  .btn-check-practice {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 12px;
+    background: var(--purple);
+    color: #fff;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background .15s;
+  }
+  .btn-check-practice:hover { background: #AB47BC; }
+  .practice-feedback {
+    margin-top: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .practice-feedback.ok { color: #2E7D32; }
+  .practice-feedback.err { color: #C62828; }
+
+  .btn-play-again {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--coral), #FF8A65);
+    color: #fff;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255,112,67,0.35);
+    transition: transform .15s;
+  }
+  .btn-play-again:hover { transform: translateY(-3px); }
+
+  /* Final score banner */
+  .score-banner {
+    text-align: center;
+    background: linear-gradient(135deg, var(--yellow), #FFB300);
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 20px;
+    color: var(--navy);
+  }
+  .score-banner .big-score {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem;
+  }
+  .score-banner p { font-size: 1rem; font-weight: 600; }
+
+  /* Shake animation for wrong */
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+  }
+  .shake { animation: shake .4s ease; }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: confettiFall 1s ease forwards;
+    z-index: 200;
+    pointer-events: none;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0); opacity: 1; }
+    100% { transform: translateY(80vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    header h1 { font-size: 1.8rem; }
+    .key { width: 34px; height: 38px; font-size: 0.9rem; }
+    .letter-box { width: 36px; height: 44px; font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background bubbles -->
+<div class="bubbles" id="bubbles"></div>
+
+<!-- ========== SETUP SCREEN ========== -->
+<div id="screen-setup" class="screen active">
+  <header>
+    <h1>🌈 Hangman มหาสนุก</h1>
+    <p class="subtitle">ฝึกสะกดคำ สนุกทุกวัน!</p>
+  </header>
+
+  <div class="setup-card">
+    <h2>⚡ โหลดชุดตัวอย่าง</h2>
+    <div class="presets">
+      <button class="preset-btn" onclick="loadPreset('animals')">🐾 สัตว์</button>
+      <button class="preset-btn" onclick="loadPreset('fruits')">🍎 ผลไม้</button>
+      <button class="preset-btn" onclick="loadPreset('colors')">🎨 สี</button>
+      <button class="preset-btn" onclick="loadPreset('school')">🎒 โรงเรียน</button>
+    </div>
+
+    <h2>✏️ ใส่คำศัพท์ของคุณเอง</h2>
+    <div class="col-labels">
+      <span class="lbl-word">คำศัพท์ (อังกฤษ)</span>
+      <span class="lbl-hint">คำใบ้ (ไทย)</span>
+      <span class="lbl-del"></span>
+    </div>
+    <div id="word-list-container"></div>
+    <button class="btn-add-word" onclick="addWordRow()">＋ เพิ่มคำศัพท์</button>
+    <button class="btn-start" onclick="startGame()">🚀 เริ่มเล่นเลย!</button>
+  </div>
+</div>
+
+<!-- ========== GAME SCREEN ========== -->
+<div id="screen-game" class="screen">
+  <header>
+    <h1>🌈 Hangman มหาสนุก</h1>
+  </header>
+
+  <div id="game-area" style="margin-top:12px;">
+    <div class="game-top-bar">
+      <div class="progress-pill" id="progress-pill">คำที่ 1 / 5</div>
+      <div class="lives-display" id="lives-display"></div>
+    </div>
+
+    <!-- Bear character -->
+    <div class="bear-wrap">
+      <canvas id="bear-canvas" width="160" height="160"></canvas>
+    </div>
+
+    <!-- Hint -->
+    <div class="hint-box" id="hint-box">
+      <span class="hint-label">💡 คำใบ้: </span><span id="hint-text">—</span>
+    </div>
+
+    <!-- Listen button -->
+    <div style="text-align:center; margin:8px 0;">
+      <button class="btn-listen" onclick="speakWord()">
+        <span class="speaker-icon">🔊</span> ฟังเสียงคำศัพท์
+      </button>
+    </div>
+
+    <!-- Word blanks -->
+    <div class="word-display" id="word-display"></div>
+
+    <!-- Wrong letters -->
+    <div class="wrong-letters" id="wrong-letters"></div>
+
+    <!-- Keyboard -->
+    <div class="keyboard" id="keyboard"></div>
+  </div>
+</div>
+
+<!-- ========== REVIEW SCREEN ========== -->
+<div id="screen-review" class="screen">
+  <header>
+    <h1>🌈 Hangman มหาสนุก</h1>
+  </header>
+
+  <div id="screen-review-inner">
+    <div class="review-header">
+      <h2>📊 สรุปผลการเล่น</h2>
+      <p id="review-subtitle"></p>
+    </div>
+
+    <div class="score-banner">
+      <div class="big-score" id="final-score-display">0/0</div>
+      <p>คำที่สะกดถูก 🎉</p>
+    </div>
+
+    <div id="wrong-words-section" style="display:none;">
+      <div class="review-header">
+        <h2>📝 ทบทวนคำที่สะกดผิด</h2>
+        <p>ลองพิมพ์ให้ถูกต้องดูสิ!</p>
+      </div>
+      <div class="review-list" id="review-list"></div>
+    </div>
+
+    <button class="btn-play-again" onclick="backToSetup()">🔄 เล่นใหม่อีกครั้ง!</button>
+  </div>
+</div>
+
+<!-- Result Overlay -->
+<div class="overlay" id="result-overlay">
+  <div class="result-card" id="result-card">
+    <div class="result-emoji" id="result-emoji"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-word" id="result-word-display"></div>
+    <div class="result-btns">
+      <button class="btn-next" id="btn-next-word" onclick="nextWord()">ต่อไป ▶</button>
+      <button class="btn-quit-review" onclick="goToReview()">🏁 จบเกมและดูสรุป</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DATA & STATE
+// ============================================================
+const PRESETS = {
+  animals: [
+    {word:'CAT', hint:'แมว'},
+    {word:'DOG', hint:'สุนัข'},
+    {word:'FISH', hint:'ปลา'},
+    {word:'BIRD', hint:'นก'},
+    {word:'LION', hint:'สิงโต'},
+    {word:'FROG', hint:'กบ'},
+    {word:'BEAR', hint:'หมี'},
+  ],
+  fruits: [
+    {word:'APPLE', hint:'แอปเปิล'},
+    {word:'MANGO', hint:'มะม่วง'},
+    {word:'GRAPE', hint:'องุ่น'},
+    {word:'LEMON', hint:'มะนาว'},
+    {word:'MELON', hint:'เมลอน'},
+    {word:'PEACH', hint:'พีช'},
+  ],
+  colors: [
+    {word:'RED', hint:'สีแดง'},
+    {word:'BLUE', hint:'สีน้ำเงิน'},
+    {word:'GREEN', hint:'สีเขียว'},
+    {word:'PINK', hint:'สีชมพู'},
+    {word:'WHITE', hint:'สีขาว'},
+    {word:'BLACK', hint:'สีดำ'},
+    {word:'PURPLE', hint:'สีม่วง'},
+  ],
+  school: [
+    {word:'BOOK', hint:'หนังสือ'},
+    {word:'PEN', hint:'ปากกา'},
+    {word:'DESK', hint:'โต๊ะ'},
+    {word:'RULER', hint:'ไม้บรรทัด'},
+    {word:'CLASS', hint:'ชั้นเรียน'},
+    {word:'PENCIL', hint:'ดินสอ'},
+  ]
+};
+
+const MAX_WRONG = 5;
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+let wordList = [];         // [{word, hint}]
+let currentIdx = 0;
+let currentWord = '';
+let currentHint = '';
+let guessed = new Set();
+let wrongCount = 0;
+let wrongWords = [];       // words failed
+let score = 0;
+
+// ============================================================
+//  BACKGROUND BUBBLES
+// ============================================================
+(function createBubbles() {
+  const colors = ['#4FC3F7','#FFD54F','#FF7043','#81C784','#CE93D8'];
+  const container = document.getElementById('bubbles');
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 30 + Math.random() * 80;
+    b.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${8+Math.random()*14}s;
+      animation-delay:${Math.random()*10}s;
+    `;
+    container.appendChild(b);
+  }
+})();
+
+// ============================================================
+//  SETUP SCREEN
+// ============================================================
+function addWordRow(word='', hint='') {
+  const container = document.getElementById('word-list-container');
+  const row = document.createElement('div');
+  row.className = 'word-row';
+  row.innerHTML = `
+    <input type="text" class="word-input" placeholder="เช่น APPLE" value="${word}" oninput="this.value=this.value.toUpperCase()">
+    <input type="text" class="hint-input" placeholder="คำใบ้ภาษาไทย" value="${hint}">
+    <button class="btn-remove" onclick="this.parentElement.remove()" title="ลบ">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function loadPreset(key) {
+  const container = document.getElementById('word-list-container');
+  container.innerHTML = '';
+  PRESETS[key].forEach(({word, hint}) => addWordRow(word, hint));
+}
+
+function startGame() {
+  const rows = document.querySelectorAll('#word-list-container .word-row');
+  const words = [];
+  rows.forEach(row => {
+    const w = row.querySelector('.word-input').value.trim().toUpperCase();
+    const h = row.querySelector('.hint-input').value.trim();
+    if (w && /^[A-Z]+$/.test(w)) words.push({word: w, hint: h || '?'});
+  });
+  if (words.length === 0) {
+    alert('กรุณาใส่คำศัพท์อย่างน้อย 1 คำก่อนนะ! 😊');
+    return;
+  }
+  wordList = shuffle(words);
+  currentIdx = 0;
+  wrongWords = [];
+  score = 0;
+  showScreen('screen-game');
+  loadWord();
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ============================================================
+//  BEAR CANVAS
+// ============================================================
+const BEAR_PARTS = [
+  // Each part appears as wrong count increases (drawn at wrongCount index)
+  drawSad,    // 1 wrong → sad face
+  drawEarL,   // 2
+  drawEarR,   // 3
+  drawPawL,   // 4
+  drawPawR,   // 5 → full sad bear
+];
+
+function drawBear(wrongCnt) {
+  const canvas = document.getElementById('bear-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 160, 160);
+
+  const cx = 80, cy = 80, r = 50;
+
+  // Always draw body
+  ctx.save();
+  // Body
+  ctx.fillStyle = wrongCnt >= MAX_WRONG ? '#EF9A9A' : '#FFD54F';
+  ctx.beginPath();
+  ctx.arc(cx, cy+30, 35, 0, Math.PI*2);
+  ctx.fill();
+  // Head
+  ctx.fillStyle = wrongCnt >= MAX_WRONG ? '#EF9A9A' : '#FFD54F';
+  ctx.beginPath();
+  ctx.arc(cx, cy-10, r-4, 0, Math.PI*2);
+  ctx.fill();
+
+  // Ears (appear at wrong >= 2, 3)
+  const earColor = wrongCnt >= MAX_WRONG ? '#EF9A9A' : '#FFD54F';
+  ctx.fillStyle = earColor;
+  if (wrongCnt >= 2) { ctx.beginPath(); ctx.arc(cx-35, cy-50, 16, 0, Math.PI*2); ctx.fill(); }
+  if (wrongCnt >= 3) { ctx.beginPath(); ctx.arc(cx+35, cy-50, 16, 0, Math.PI*2); ctx.fill(); }
+
+  // Inner ears
+  ctx.fillStyle = '#FF8A65';
+  if (wrongCnt >= 2) { ctx.beginPath(); ctx.arc(cx-35, cy-50, 9, 0, Math.PI*2); ctx.fill(); }
+  if (wrongCnt >= 3) { ctx.beginPath(); ctx.arc(cx+35, cy-50, 9, 0, Math.PI*2); ctx.fill(); }
+
+  // Paws
+  ctx.fillStyle = earColor;
+  if (wrongCnt >= 4) { ctx.beginPath(); ctx.arc(cx-42, cy+50, 14, 0, Math.PI*2); ctx.fill(); }
+  if (wrongCnt >= 5) { ctx.beginPath(); ctx.arc(cx+42, cy+50, 14, 0, Math.PI*2); ctx.fill(); }
+
+  // Muzzle
+  ctx.fillStyle = '#FFF8E1';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy-2, 20, 15, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Eyes
+  const eyeStyle = wrongCnt >= MAX_WRONG ? 'X' : (wrongCnt >= 3 ? 'sad' : 'happy');
+  drawEyes(ctx, cx, cy, eyeStyle);
+
+  // Nose
+  ctx.fillStyle = '#5D4037';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy+3, 7, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Mouth
+  ctx.strokeStyle = '#5D4037';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (wrongCnt >= 2) {
+    // sad mouth
+    ctx.moveTo(cx-8, cy+12);
+    ctx.quadraticCurveTo(cx, cy+8, cx+8, cy+12);
+  } else {
+    // happy mouth
+    ctx.moveTo(cx-8, cy+10);
+    ctx.quadraticCurveTo(cx, cy+18, cx+8, cy+10);
+  }
+  ctx.stroke();
+
+  // Sweat drops when wrong
+  if (wrongCnt >= 1 && wrongCnt < MAX_WRONG) {
+    ctx.fillStyle = '#81D4FA';
+    ctx.beginPath(); ctx.arc(cx+46, cy-20, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+52, cy-10, 3, 0, Math.PI*2); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawEyes(ctx, cx, cy, style) {
+  if (style === 'X') {
+    ctx.strokeStyle = '#C62828';
+    ctx.lineWidth = 3;
+    // Left X
+    ctx.beginPath(); ctx.moveTo(cx-20,cy-24); ctx.lineTo(cx-12,cy-16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-12,cy-24); ctx.lineTo(cx-20,cy-16); ctx.stroke();
+    // Right X
+    ctx.beginPath(); ctx.moveTo(cx+12,cy-24); ctx.lineTo(cx+20,cy-16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+20,cy-24); ctx.lineTo(cx+12,cy-16); ctx.stroke();
+  } else if (style === 'sad') {
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.arc(cx-16, cy-20, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+16, cy-20, 5, 0, Math.PI*2); ctx.fill();
+    // sad brows
+    ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(cx-22,cy-30); ctx.lineTo(cx-10,cy-27); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+10,cy-27); ctx.lineTo(cx+22,cy-30); ctx.stroke();
+  } else {
+    // happy eyes
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.arc(cx-16, cy-20, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+16, cy-20, 5, 0, Math.PI*2); ctx.fill();
+    // shine
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx-13, cy-23, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+19, cy-23, 2, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+// Placeholder functions to avoid lint errors
+function drawSad(){}
+function drawEarL(){}
+function drawEarR(){}
+function drawPawL(){}
+function drawPawR(){}
+
+// ============================================================
+//  GAME LOGIC
+// ============================================================
+function loadWord() {
+  if (currentIdx >= wordList.length) {
+    goToReview();
+    return;
+  }
+  const item = wordList[currentIdx];
+  currentWord = item.word;
+  currentHint = item.hint;
+  guessed = new Set();
+  wrongCount = 0;
+
+  document.getElementById('progress-pill').textContent =
+    `คำที่ ${currentIdx + 1} / ${wordList.length}`;
+  document.getElementById('hint-text').textContent = currentHint;
+
+  renderLives();
+  renderWordDisplay();
+  renderKeyboard();
+  renderWrongLetters();
+  drawBear(0);
+}
+
+function renderLives() {
+  const el = document.getElementById('lives-display');
+  let html = '';
+  for (let i = 0; i < MAX_WRONG; i++) {
+    html += `<span class="heart ${i >= (MAX_WRONG - wrongCount) ? 'lost' : ''}">❤️</span>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderWordDisplay() {
+  const el = document.getElementById('word-display');
+  el.innerHTML = currentWord.split('').map(letter => {
+    const isRevealed = guessed.has(letter);
+    return `<div class="letter-box ${isRevealed ? 'revealed' : ''}">
+      ${isRevealed ? letter : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderKeyboard() {
+  const keyboard = document.getElementById('keyboard');
+  const rows = [
+    'QWERTYUIOP'.split(''),
+    'ASDFGHJKL'.split(''),
+    'ZXCVBNM'.split('')
+  ];
+  keyboard.innerHTML = rows.map(row =>
+    `<div class="key-row">${row.map(l => {
+      let cls = '';
+      if (guessed.has(l)) {
+        cls = currentWord.includes(l) ? 'correct' : 'wrong';
+      }
+      return `<button class="key ${cls}" id="key-${l}"
+        onclick="guessLetter('${l}')"
+        ${guessed.has(l) ? 'disabled' : ''}>
+        ${l}
+      </button>`;
+    }).join('')}</div>`
+  ).join('');
+}
+
+function renderWrongLetters() {
+  const wrongs = [...guessed].filter(l => !currentWord.includes(l));
+  const el = document.getElementById('wrong-letters');
+  el.textContent = wrongs.length > 0 ? '✗ ' + wrongs.join('  ') : '';
+}
+
+function guessLetter(letter) {
+  if (guessed.has(letter)) return;
+  guessed.add(letter);
+
+  const btn = document.getElementById('key-' + letter);
+
+  if (currentWord.includes(letter)) {
+    if (btn) { btn.disabled = true; btn.classList.add('correct'); }
+    renderWordDisplay();
+
+    // Check win
+    const allRevealed = currentWord.split('').every(l => guessed.has(l));
+    if (allRevealed) {
+      score++;
+      setTimeout(() => showResult(true), 400);
+    }
+  } else {
+    wrongCount++;
+    if (btn) { btn.disabled = true; btn.classList.add('wrong'); }
+    drawBear(wrongCount);
+    renderLives();
+    renderWrongLetters();
+
+    // Shake word display
+    const wd = document.getElementById('word-display');
+    wd.classList.remove('shake');
+    void wd.offsetWidth;
+    wd.classList.add('shake');
+
+    if (wrongCount >= MAX_WRONG) {
+      // Reveal all letters as wrong
+      const el = document.getElementById('word-display');
+      el.innerHTML = currentWord.split('').map(letter => {
+        const isGuessed = guessed.has(letter);
+        return `<div class="letter-box ${isGuessed ? 'revealed' : 'wrong-reveal'}">
+          ${letter}
+        </div>`;
+      }).join('');
+      wrongWords.push({word: currentWord, hint: currentHint});
+      setTimeout(() => showResult(false), 600);
+    }
+  }
+}
+
+function showResult(isWin) {
+  const overlay = document.getElementById('result-overlay');
+  document.getElementById('result-emoji').textContent = isWin ? '🎉' : '😢';
+  document.getElementById('result-title').textContent = isWin ? 'เก่งมากเลย!' : 'ไม่เป็นไรนะ!';
+  document.getElementById('result-title').style.color = isWin ? '#2E7D32' : '#C62828';
+  document.getElementById('result-word-display').innerHTML =
+    `คำนี้คือ: <strong>${currentWord}</strong>`;
+
+  const btnNext = document.getElementById('btn-next-word');
+  if (currentIdx + 1 >= wordList.length) {
+    btnNext.textContent = '🏁 ดูสรุปผล';
+  } else {
+    btnNext.textContent = 'คำต่อไป ▶';
+  }
+
+  overlay.classList.add('show');
+
+  if (isWin) launchConfetti();
+}
+
+function nextWord() {
+  document.getElementById('result-overlay').classList.remove('show');
+  currentIdx++;
+  if (currentIdx >= wordList.length) {
+    goToReview();
+  } else {
+    loadWord();
+  }
+}
+
+function goToReview() {
+  document.getElementById('result-overlay').classList.remove('show');
+  buildReviewScreen();
+  showScreen('screen-review');
+}
+
+// ============================================================
+//  REVIEW SCREEN
+// ============================================================
+function buildReviewScreen() {
+  const total = wordList.length;
+  const correct = score;
+
+  document.getElementById('final-score-display').textContent = `${correct}/${total}`;
+  document.getElementById('review-subtitle').textContent =
+    correct === total ? '🌟 สะกดถูกทุกคำ เก่งมาก!' :
+    correct >= total * 0.7 ? '👏 ทำได้ดีมาก! ลองทบทวนคำที่ผิดด้วยนะ' :
+    '💪 ไม่เป็นไร ฝึกอีกนิดก็เก่งแน่นอน!';
+
+  const wrongSection = document.getElementById('wrong-words-section');
+  const listEl = document.getElementById('review-list');
+  listEl.innerHTML = '';
+
+  if (wrongWords.length > 0) {
+    wrongSection.style.display = 'block';
+    wrongWords.forEach((item, idx) => {
+      const div = document.createElement('div');
+      div.className = 'review-item';
+      const pId = `practice-fb-${idx}`;
+      div.innerHTML = `
+        <div class="rv-num">${idx+1}</div>
+        <div class="rv-content">
+          <div class="rv-word">${item.word}</div>
+          <div class="rv-hint">💡 ${item.hint}</div>
+          <div class="practice-area">
+            <p>✏️ ลองพิมพ์คำนี้ให้ถูก:</p>
+            <div class="practice-input-row">
+              <input type="text" id="practice-input-${idx}" placeholder="${'_'.repeat(item.word.length)}"
+                oninput="this.value=this.value.toUpperCase()"
+                onkeydown="if(event.key==='Enter')checkPractice(${idx},'${item.word}')">
+              <button class="btn-check-practice" onclick="checkPractice(${idx},'${item.word}')">ตรวจ ✓</button>
+            </div>
+            <div class="practice-feedback" id="${pId}"></div>
+          </div>
+        </div>
+        <button class="btn-listen-rv" onclick="speakText('${item.word}')">🔊 ฟัง</button>
+      `;
+      listEl.appendChild(div);
+    });
+  } else {
+    wrongSection.style.display = 'none';
+  }
+}
+
+function checkPractice(idx, word) {
+  const input = document.getElementById(`practice-input-${idx}`);
+  const fb = document.getElementById(`practice-fb-${idx}`);
+  const val = input.value.trim().toUpperCase();
+  if (val === word) {
+    fb.textContent = '✅ ถูกต้อง! เก่งมาก!';
+    fb.className = 'practice-feedback ok';
+    input.style.borderColor = '#43A047';
+    speakText('Great job!');
+  } else if (!val) {
+    fb.textContent = '⚠️ กรุณาพิมพ์คำศัพท์ก่อนนะ';
+    fb.className = 'practice-feedback err';
+  } else {
+    fb.textContent = `❌ ยังไม่ถูกนะ คำที่ถูกคือ "${word}"`;
+    fb.className = 'practice-feedback err';
+    input.style.borderColor = '#E53935';
+    input.value = '';
+    setTimeout(() => { input.style.borderColor = ''; }, 1500);
+  }
+}
+
+// ============================================================
+//  TTS
+// ============================================================
+function speakWord() {
+  speakText(currentWord);
+}
+
+function speakText(text) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'en-US';
+  utter.rate = 0.85;
+  utter.pitch = 1.1;
+  speechSynthesis.speak(utter);
+}
+
+// ============================================================
+//  CONFETTI
+// ============================================================
+function launchConfetti() {
+  const colors = ['#4FC3F7','#FFD54F','#FF7043','#81C784','#CE93D8','#FF8A65'];
+  for (let i = 0; i < 40; i++) {
+    setTimeout(() => {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      c.style.cssText = `
+        left:${10+Math.random()*80}%;
+        top:0;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        width:${6+Math.random()*10}px;
+        height:${6+Math.random()*10}px;
+        animation-duration:${0.8+Math.random()*0.8}s;
+        animation-delay:${Math.random()*0.4}s;
+        border-radius:${Math.random()>0.5?'50%':'2px'};
+      `;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 1600);
+    }, i * 30);
+  }
+}
+
+// ============================================================
+//  NAVIGATION
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function backToSetup() {
+  showScreen('screen-setup');
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.onload = function() {
+  // Load default preset
+  loadPreset('animals');
+};
+</script>
+</body>
+</html>
